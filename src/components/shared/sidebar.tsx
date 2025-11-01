@@ -1,6 +1,7 @@
 import { Users, FileText, Settings, LayoutDashboard, GraduationCap, ClipboardList } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import LogoHeader from "../LogoHeader";
 
 const menuItems = [
   {
@@ -37,13 +38,7 @@ const Sidebar = () => {
     <aside className="flex h-screen w-64 flex-col border-r bg-white">
       {/* Logo Section */}
       <div className="flex items-center gap-3 border-b px-6 py-5">
-        <div className="flex size-12 items-center justify-center rounded-xl bg-blue-500">
-          <GraduationCap className="size-6 text-white" />
-        </div>
-        <div className="flex flex-col">
-          <h1 className="text-lg font-bold text-gray-900">SmartLearn</h1>
-          <p className="text-sm text-gray-500">Giảng viên</p>
-        </div>
+        <LogoHeader size="large" />
       </div>
 
       {/* Navigation Menu */}

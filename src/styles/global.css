@@ -118,3 +118,26 @@
     @apply bg-background text-foreground;
   }
 }
+
+.recharts-surface:focus {
+  outline: none;
+}
+
+/* Customize tooltip cursor background */
+.recharts-tooltip-cursor {
+  fill: #e5fff3 !important;
+  opacity: 0.8 !important;
+  rx: 8 !important; /* Bo góc trên */
+  ry: 8 !important; /* Bo góc dưới */
+}
+
+/* Customize tooltip content (text box) */
+.recharts-tooltip-wrapper {
+  border-radius: 12px !important;
+}
+
+.recharts-default-tooltip {
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid #e5e7eb !important;
+}

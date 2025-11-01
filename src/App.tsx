@@ -13,8 +13,9 @@ import LandingPage from "./pages/Landing";
 import SignInPage from "./pages/auth/signin";
 import SignUpPage from "./pages/auth/signup";
 import EmployeeList from "./pages/courses";
+import CriteriaPage from "./pages/criteria";
 import AssessmentsPage from "./pages/assessments";
-
+import { ToastContainer } from "react-toastify";
 function App() {
   return (
     <BrowserRouter>
@@ -61,6 +62,8 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/criteria" element={<CriteriaPage />} />
+          <Route path="/assessments" element={<AssessmentsPage />} />
           <Route
             path="/about"
             element={
@@ -95,6 +98,7 @@ function App() {
           />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <ToastContainer />
       </AuthProvider>
     </BrowserRouter>
   );

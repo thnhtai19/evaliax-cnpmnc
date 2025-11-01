@@ -1,10 +1,11 @@
-import { BookOpen, Users, FileText, Settings, LayoutDashboard, LogOut, GraduationCap, ClipboardList } from "lucide-react";
+import { BookOpen, Users, FileText, Settings, LayoutDashboard, LogOut, ClipboardList } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import LogoHeader from "../LogoHeader";
 import { useAuth } from "@/hooks/useAuthContext";
 import { useState } from "react";
 import { Menu, MenuItem, IconButton } from "@mui/material";
+import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 
 const menuItems = [
   {
@@ -18,10 +19,20 @@ const menuItems = [
     href: "/courses",
   },
   {
+    title: "Danh sách tiêu chí",
+    icon: FactCheckOutlinedIcon,
+    href: "/criteria",
+  },
+  {
     title: "Học viên",
     icon: Users,
     href: "/students",
   },
+  // {
+  //   title: "Đánh giá",
+  //   icon: FileText,
+  //   href: "/assessment",
+  // },
   {
     title: "Đánh giá",
     icon: ClipboardList,
@@ -91,23 +102,15 @@ const Sidebar = () => {
       <div className="border-t p-4">
         <div className="flex items-center gap-3 rounded-lg p-3 hover:bg-gray-100 transition-colors">
           <img
-            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || user?.username || 'User'}`}
-            alt={user?.name || user?.username || 'User'}
+            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || user?.username || "User"}`}
+            alt={user?.name || user?.username || "User"}
             className="size-10 rounded-full"
           />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
-              {user?.name || user?.username || 'User'}
-            </p>
-            <p className="text-xs text-gray-500 truncate">
-              {user?.email || user?.username}
-            </p>
+            <p className="text-sm font-medium text-gray-900 truncate">{user?.name || user?.username || "User"}</p>
+            <p className="text-xs text-gray-500 truncate">{user?.email || user?.username}</p>
           </div>
-          <IconButton
-            onClick={handleMenuClick}
-            size="small"
-            className="text-gray-400 hover:text-gray-600"
-          >
+          <IconButton onClick={handleMenuClick} size="small" className="text-gray-400 hover:text-gray-600">
             <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -123,12 +126,12 @@ const Sidebar = () => {
           open={open}
           onClose={handleMenuClose}
           anchorOrigin={{
-            vertical: 'top',
-            horizontal: 'right',
+            vertical: "top",
+            horizontal: "right",
           }}
           transformOrigin={{
-            vertical: 'bottom',
-            horizontal: 'right',
+            vertical: "bottom",
+            horizontal: "right",
           }}
         >
           <MenuItem onClick={handleLogout}>

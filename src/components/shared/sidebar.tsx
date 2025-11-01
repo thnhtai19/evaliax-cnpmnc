@@ -1,4 +1,4 @@
-import { BookOpen, Users, FileText, Settings, LayoutDashboard, GraduationCap } from "lucide-react";
+import { BookOpen, Users, FileText, Settings, LayoutDashboard, GraduationCap, ClipboardList } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +17,11 @@ const menuItems = [
     title: "Học viên",
     icon: Users,
     href: "/students",
+  },
+  {
+    title: "Đánh giá",
+    icon: ClipboardList,
+    href: "/assessments",
   },
   {
     title: "Báo cáo",

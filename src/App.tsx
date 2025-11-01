@@ -10,6 +10,7 @@ import LandingPage from "./pages/Landing";
 import SignInPage from "./pages/auth/signin";
 import SignUpPage from "./pages/auth/signup";
 import EmployeeList from "./pages/courses";
+import AssessmentsPage from "./pages/assessments";
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/courses" element={<EmployeeList />} />
         <Route path="/students" element={<Students />} />
+        <Route path="/assessments" element={<AssessmentsPage />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<NotFound />} />

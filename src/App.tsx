@@ -10,7 +10,6 @@ import Settings from "./pages/settings";
 import NotFound from "./pages/not-found";
 import EmployeeList from "./pages/courses";
 
-
 function App() {
   return (
     <BrowserRouter>

@@ -13,6 +13,7 @@ import LandingPage from "./pages/Landing";
 import SignInPage from "./pages/auth/signin";
 import SignUpPage from "./pages/auth/signup";
 import EmployeeList from "./pages/courses";
+import AssessmentsPage from "./pages/assessments";
 
 function App() {
   return (
@@ -57,6 +58,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <EmployeeList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/about"
+            element={
+              <ProtectedRoute>
+                <About />
               </ProtectedRoute>
             }
           />

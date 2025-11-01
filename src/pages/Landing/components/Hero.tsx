@@ -1,7 +1,10 @@
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Play } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 function Hero() {
+  const navigate = useNavigate();
+  
   return (
     <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-0 h-full lg:h-screen h-auto-4xl flex flex-col items-center justify-center relative">
       <div
@@ -35,7 +38,7 @@ function Hero() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Button className='h-14'>
+              <Button className='h-14' onClick={() => navigate('/auth/signin')}>
                 <div className='font-bold'>Bắt đầu đánh giá ngay</div>
                 <ArrowRight className="w-5 h-5" />
               </Button>

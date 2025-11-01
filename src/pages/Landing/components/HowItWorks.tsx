@@ -1,7 +1,10 @@
 import { Button } from '@/components/ui/button';
 import { LogIn, User, FileText, BarChart3, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 function HowItWorks() {
+  const navigate = useNavigate();
+  
   const steps = [
     {
       icon: LogIn,
@@ -82,7 +85,7 @@ function HowItWorks() {
         </div>
 
         <div className="mt-16 text-center">
-          <Button className="h-12 font-semibold">
+          <Button className="h-12 font-semibold" onClick={() => navigate('/auth/signin')}>
             Bắt đầu ngay bây giờ
             <ArrowRight className="w-5 h-5" />
           </Button>

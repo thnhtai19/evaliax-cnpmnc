@@ -2,41 +2,47 @@ import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import Sidebar from "@/components/shared/sidebar";
 import { format } from "date-fns";
-import { FileText, Loader2, Eye, ChevronUp } from "lucide-react";
+import { FileText, Loader2, Plus, Edit, ArrowLeft } from "lucide-react";
 import { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import type { AssessmentResponse } from "@/lib/mockAssessmentData";
 import { mockAssessmentData } from "@/lib/mockAssessmentData";
 
-// API function to fetch assessments
-const fetchAssessments = async (): Promise<AssessmentResponse> => {
+// API function to fetch assessments for a specific employee
+const fetchEmployeeAssessments = async (employeeId: number): Promise<AssessmentResponse> => {
   try {
-    // Replace with your actual API endpoint
-    const response = await axios.get<unknown>("/api/assessments", {
+    const response = await axios.get<unknown>(`/api/assessments/employee/${employeeId}`, {
       headers: {
         "Content-Type": "application/json",
       },
     });
 
-    // Check if response is string (HTML) instead of JSON
     if (typeof response.data === "string" || response.data === null || response.data === undefined) {
       console.warn("API returned HTML or invalid response, using mock data");
-      return mockAssessmentData;
+      return filterMockDataByEmployee(employeeId);
     }
 
-    // Check if response has expected structure
     const data = response.data as AssessmentResponse;
     if (data && typeof data === "object" && "data" in data && Array.isArray(data.data)) {
       return data;
     }
 
-    // If response structure is invalid, use mock data
     console.warn("API returned invalid response structure, using mock data");
-    return mockAssessmentData;
+    return filterMockDataByEmployee(employeeId);
   } catch (error) {
-    // Fallback to mock data if API fails
     console.warn("API call failed, using mock data:", error);
-    return mockAssessmentData;
+    return filterMockDataByEmployee(employeeId);
   }
+};
+
+// Filter mock data by employee ID
+const filterMockDataByEmployee = (employeeId: number): AssessmentResponse => {
+  const filtered = mockAssessmentData.data.filter((assessment) => assessment.employee.id === employeeId);
+  return {
+    message: "Success",
+    status: 200,
+    data: filtered,
+  };
 };
 
 const getStatusBadge = (status: string) => {
@@ -57,10 +63,15 @@ const getStatusBadge = (status: string) => {
   );
 };
 
-export default function AssessmentsPage() {
+export default function AssessmentsByEmployeePage() {
+  const { employeeId } = useParams<{ employeeId: string }>();
+  const navigate = useNavigate();
+  const employeeIdNum = employeeId ? parseInt(employeeId, 10) : 0;
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ["assessments"],
-    queryFn: fetchAssessments,
+    queryKey: ["employee-assessments", employeeIdNum],
+    queryFn: () => fetchEmployeeAssessments(employeeIdNum),
+    enabled: !!employeeIdNum,
   });
 
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
@@ -75,6 +86,18 @@ export default function AssessmentsPage() {
     setExpandedRows(newExpanded);
   };
 
+  const handleCreateAssessment = () => {
+    alert(`Tạo đánh giá mới cho nhân viên ID: ${employeeIdNum}`);
+    // TODO: Implement create assessment logic
+  };
+
+  const handleEditAssessment = (assessmentId: number) => {
+    alert(`Chỉnh sửa đánh giá #${assessmentId}`);
+    // TODO: Implement edit assessment logic
+  };
+
+  const employeeName = data?.data?.[0]?.employee?.name || "Nhân viên";
+
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar />
@@ -82,9 +105,28 @@ export default function AssessmentsPage() {
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
         <div className="p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <FileText className="size-8 text-blue-600" />
-            <h1 className="text-3xl font-bold text-gray-900">Đánh giá nhân viên</h1>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate("/courses")}
+                className="p-2 hover:bg-gray-100 rounded-lg transition"
+                title="Quay lại"
+              >
+                <ArrowLeft className="size-5 text-gray-600" />
+              </button>
+              <FileText className="size-8 text-blue-600" />
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Đánh giá của {employeeName}</h1>
+                <p className="text-sm text-gray-500">ID nhân viên: {employeeId}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleCreateAssessment}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition"
+            >
+              <Plus className="size-4" />
+              Tạo đánh giá mới
+            </button>
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow-sm border">
@@ -107,16 +149,21 @@ export default function AssessmentsPage() {
                 {!data || !data.data || data.data.length === 0 ? (
                   <div className="text-center py-12">
                     <FileText className="size-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-600 text-lg">Chưa có đánh giá nào</p>
+                    <p className="text-gray-600 text-lg mb-4">Chưa có đánh giá nào cho nhân viên này</p>
+                    <button
+                      onClick={handleCreateAssessment}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition"
+                    >
+                      <Plus className="size-4" />
+                      Tạo đánh giá đầu tiên
+                    </button>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="min-w-full text-sm text-gray-700 border border-gray-200 rounded-lg">
                       <thead className="bg-gray-100 text-xs text-gray-600 uppercase tracking-wide">
                         <tr>
-                          <th className="px-4 py-3 text-left">ID đánh giá</th>
-                          <th className="px-4 py-3 text-left">Nhân viên</th>
-                          <th className="px-4 py-3 text-left">Người đánh giá</th>
+                          <th className="px-4 py-3 text-center">STT</th>
                           <th className="px-4 py-3 text-center">Trạng thái</th>
                           <th className="px-4 py-3 text-center">Tổng điểm</th>
                           <th className="px-4 py-3 text-center">Số tiêu chí</th>
@@ -125,29 +172,12 @@ export default function AssessmentsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {data.data.map((assessment) => {
+                        {data.data.map((assessment, index) => {
                           const isExpanded = expandedRows.has(assessment.assessmentId);
                           return (
                             <>
-                              <tr
-                                key={assessment.assessmentId}
-                                className="border-t hover:bg-gray-50 transition cursor-pointer"
-                              >
-                                <td className="px-4 py-3 font-medium text-gray-900">#{assessment.assessmentId}</td>
-                                <td className="px-4 py-3">
-                                  <div>
-                                    <p className="font-semibold text-gray-900">{assessment.employee.name}</p>
-                                    <p className="text-xs text-gray-500">{assessment.employee.email}</p>
-                                    <p className="text-xs text-gray-400">ID: {assessment.employee.id}</p>
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3">
-                                  <div>
-                                    <p className="font-semibold text-gray-900">{assessment.supervisor.name}</p>
-                                    <p className="text-xs text-gray-500">{assessment.supervisor.email}</p>
-                                    <p className="text-xs text-gray-400">ID: {assessment.supervisor.id}</p>
-                                  </div>
-                                </td>
+                              <tr key={assessment.assessmentId} className="border-t hover:bg-gray-50 transition">
+                                <td className="px-4 py-3 text-center font-medium text-gray-900">{index + 1}</td>
                                 <td className="px-4 py-3 text-center">{getStatusBadge(assessment.status)}</td>
                                 <td className="px-4 py-3 text-center">
                                   <span className="text-lg font-bold text-blue-600">
@@ -163,27 +193,28 @@ export default function AssessmentsPage() {
                                   {format(new Date(assessment.createdAt), "dd/MM/yyyy HH:mm")}
                                 </td>
                                 <td className="px-4 py-3 text-center">
-                                  <button
-                                    onClick={() => toggleRow(assessment.assessmentId)}
-                                    className="flex items-center justify-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition"
-                                  >
-                                    {isExpanded ? (
-                                      <>
-                                        <ChevronUp className="size-4" />
-                                        <span>Thu gọn</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Eye className="size-4" />
-                                        <span>Chi tiết</span>
-                                      </>
-                                    )}
-                                  </button>
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      onClick={() => handleEditAssessment(assessment.assessmentId)}
+                                      className="flex items-center gap-1 px-3 py-1.5 text-sm text-green-600 hover:bg-green-50 rounded-md transition"
+                                      title="Chỉnh sửa"
+                                    >
+                                      <Edit className="size-4" />
+                                      <span>Sửa</span>
+                                    </button>
+                                    <button
+                                      onClick={() => toggleRow(assessment.assessmentId)}
+                                      className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition"
+                                      title={isExpanded ? "Thu gọn" : "Chi tiết"}
+                                    >
+                                      {isExpanded ? "Thu gọn" : "Chi tiết"}
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                               {isExpanded && (
                                 <tr className="bg-gray-50">
-                                  <td colSpan={8} className="px-4 py-4">
+                                  <td colSpan={6} className="px-4 py-4">
                                     <div className="space-y-4">
                                       <div>
                                         <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase">

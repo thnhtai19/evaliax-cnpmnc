@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { FaPlus, FaSearch } from "react-icons/fa";
 import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 import EmployeeActionsDropdown from "@/components/Employee.Drop/EmployeeDropDown";
 import Sidebar from "@/components/shared/sidebar";
 
@@ -44,11 +45,20 @@ const dummyEmployees: Employee[] = [
 ];
 
 const EmployeeList: React.FC = () => {
+  const navigate = useNavigate();
   const [employees] = useState<Employee[]>(dummyEmployees);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [perPage, setPerPage] = useState(5);
   const [page, setPage] = useState(1);
+
+  const handleViewAssessments = (employeeId: string) => {
+    // Map employee ID to assessment employee ID
+    // Since employee IDs are strings like "EMP001", we need to map them
+    // For now, we'll use a simple mapping or extract number from ID
+    const numericId = parseInt(employeeId.replace("EMP", "")) + 44; // Map EMP001 -> 45, EMP002 -> 46, etc.
+    navigate(`/assessments/${numericId}`);
+  };
 
   const filtered = employees
     .filter(
@@ -149,7 +159,7 @@ const EmployeeList: React.FC = () => {
                       <td className="px-4 py-3">{format(emp.joinedAt, "dd/MM/yyyy")}</td>
                       <td className="px-4 py-3 text-center">
                         <EmployeeActionsDropdown
-                          onViewDetails={() => alert(`Chi tiết đánh giá của ${emp.name}`)}
+                          onViewAssessments={() => handleViewAssessments(emp.id)}
                           onEdit={() => alert(`Chỉnh sửa ${emp.name}`)}
                           onDelete={() => confirm(`Bạn chắc chắn muốn xoá ${emp.name}?`)}
                         />

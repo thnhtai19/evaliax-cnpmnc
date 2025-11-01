@@ -11,6 +11,7 @@ import SignInPage from "./pages/auth/signin";
 import SignUpPage from "./pages/auth/signup";
 import EmployeeList from "./pages/courses";
 import AssessmentsPage from "./pages/assessments";
+import AssessmentsByEmployeePage from "./pages/assessments-by-employee";
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         <Route path="/courses" element={<EmployeeList />} />
         <Route path="/students" element={<Students />} />
         <Route path="/assessments" element={<AssessmentsPage />} />
+        <Route path="/assessments/:employeeId" element={<AssessmentsByEmployeePage />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<NotFound />} />

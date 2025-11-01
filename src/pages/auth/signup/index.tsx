@@ -1,6 +1,7 @@
 import LogoHeader from "@/components/LogoHeader";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuthContext";
 import {
     Box,
     TextField,
@@ -16,22 +17,9 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 
-interface SignUpRequest {
-    name: string;
-    username: string;
-    password: string;
-}
-
-const useSignUp = () => ({
-    mutateAsync: async (values: SignUpRequest) => {
-        console.log('Sign up:', values);
-    },
-    isPending: false,
-});
-
 export default function SignUpPage() {
     const navigate = useNavigate();
-    const signUpMutation = useSignUp();
+    const { signup, isSignupPending } = useAuth();
     const [name, setName] = useState("");
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -82,20 +70,16 @@ export default function SignUpPage() {
         }
 
         try {
-            await signUpMutation.mutateAsync({ name, username, password });
+            await signup(name, username, password);
             setSnackbar({
                 open: true,
                 message: "Account created successfully!",
                 severity: "success",
             });
-            // Redirect to signin or dashboard after successful signup
-            setTimeout(() => {
-                navigate("/auth/signin");
-            }, 1500);
         } catch (error) {
             const errorMessage = error instanceof Error && 'response' in error 
                 ? (error as { response?: { data?: { message?: string } } }).response?.data?.message 
-                : undefined;
+                : error instanceof Error ? error.message : undefined;
             setSnackbar({
                 open: true,
                 message: errorMessage || "Sign up failed. Please try again.",
@@ -200,10 +184,10 @@ export default function SignUpPage() {
                             type="submit"
                             variant="contained"
                             fullWidth
-                            disabled={signUpMutation.isPending}
+                            disabled={isSignupPending}
                             sx={{ mt: 1, textTransform: "none", py: 1, height: 48 }}
                         >
-                            {signUpMutation.isPending ? (
+                            {isSignupPending ? (
                                 <CircularProgress size={24} color="inherit" />
                             ) : (
                                 "Sign up with Email"

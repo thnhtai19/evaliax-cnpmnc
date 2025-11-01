@@ -1,7 +1,10 @@
 import { Button } from '@/components/ui/button';
 import { Star } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 function Testimonials() {
+  const navigate = useNavigate();
+  
   const testimonials = [
     {
       name: "Nguyễn Văn An",
@@ -87,7 +90,7 @@ function Testimonials() {
             </div>
             <div className="text-center sm:text-right">
               <p className="text-gray-600 mb-4">Hãy trở thành một phần của cộng đồng</p>
-              <Button className='h-12 font-semibold'>
+              <Button className='h-12 font-semibold' onClick={() => navigate('/auth/signin')}>
                 Bắt đầu dùng thử miễn phí
               </Button>
             </div>

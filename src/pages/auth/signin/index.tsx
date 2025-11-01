@@ -1,6 +1,7 @@
 import LogoHeader from "@/components/LogoHeader";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuthContext";
 import {
     Box,
     TextField,
@@ -16,21 +17,9 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 
-interface LoginRequest {
-    username: string;
-    password: string;
-}
-
-const useLogin = () => ({
-    mutateAsync: async (values: LoginRequest) => {
-        console.log('Login:', values);
-    },
-    isPending: false,
-});
-
 export default function SignInPage() {
     const navigate = useNavigate();
-    const loginMutation = useLogin();
+    const { login, isLoginPending } = useAuth();
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [errors, setErrors] = useState({ username: "", password: "" });
@@ -64,20 +53,19 @@ export default function SignInPage() {
         }
 
         try {
-            await loginMutation.mutateAsync({ username, password });
+            await login(username, password);
             setSnackbar({
                 open: true,
                 message: "Login successful!",
                 severity: "success",
             });
-            navigate("/dashboard");
         } catch (error) {
             const errorMessage = error instanceof Error && 'response' in error 
                 ? (error as { response?: { data?: { message?: string } } }).response?.data?.message 
-                : undefined;
+                : error instanceof Error ? error.message : undefined;
             setSnackbar({
                 open: true,
-                message: errorMessage || "Login failed. Please try again.",
+                message: errorMessage || "Invalid username or password.",
                 severity: "error",
             });
         }
@@ -166,10 +154,10 @@ export default function SignInPage() {
                             type="submit"
                             variant="contained"
                             fullWidth
-                            disabled={loginMutation.isPending}
+                            disabled={isLoginPending}
                             sx={{ mt: 1, textTransform: "none", py: 1, height: 48 }}
                         >
-                            {loginMutation.isPending ? (
+                            {isLoginPending ? (
                                 <CircularProgress size={24} color="inherit" />
                             ) : (
                                 "Sign in with Email"

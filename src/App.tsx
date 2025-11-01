@@ -5,7 +5,6 @@ import { GuestRoute } from "./components/GuestRoute";
 import About from "./pages/about";
 import Dashboard from "./pages/dashboard";
 
-import Students from "./pages/students";
 import Reports from "./pages/reports";
 import Settings from "./pages/settings";
 import NotFound from "./pages/not-found";

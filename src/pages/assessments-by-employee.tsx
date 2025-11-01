@@ -193,7 +193,7 @@ export default function AssessmentsByEmployeePage() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <button
-                onClick={() => navigate("/courses")}
+                onClick={() => navigate("/employee")}
                 className="p-2 hover:bg-gray-100 rounded-lg transition"
                 title="Quay lại"
               >

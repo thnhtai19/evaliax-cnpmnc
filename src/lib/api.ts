@@ -2,18 +2,18 @@ import apiClient from './axios';
 
 export const authAPI = {
     login: async (username: string, password: string) => {
-        // const response = await apiClient.post('/auth/login', { username, password });
-        // return response.data;
-        return {
-            accessToken: '1234567890',
-            refreshToken: '1234567890',
-            user: {
-                id: "1",
-                name: 'Nguyễn Văn A',
-                email: 'nguyenvana@gmail.com',
-                username,
-            },
-        }
+        const response = await apiClient.post('/auth/login', { username, password });
+        return response.data;
+        // return {
+        //     accessToken: '1234567890',
+        //     refreshToken: '1234567890',
+        //     user: {
+        //         id: "1",
+        //         name: 'Nguyễn Văn A',
+        //         email: 'nguyenvana@gmail.com',
+        //         username,
+        //     },
+        // }
     },
 
     signup: async (name: string, username: string, password: string) => {

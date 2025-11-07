@@ -9,6 +9,7 @@ import { FaFileExport } from "react-icons/fa";
 import * as XLSX from "xlsx";
 import { createAssessment } from "@/service/api/assessments/create";
 import { updateAssessment, type UpdateAssessmentRequest } from "@/service/api/assessments/update";
+import { updateAssessmentStatus } from "@/service/api/assessments/update-status";
 import { getCriteriaList } from "@/service/api/criteria/get-list";
 import type { Criteria as CriteriaType } from "@/service/api/criteria/get-list/types";
 import { toast } from "react-toastify";
@@ -64,7 +65,9 @@ export default function AssessmentsByEmployeePage() {
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [editingAssessment, setEditingAssessment] = useState<Assessment | null>(null);
+  const [updatingStatusAssessment, setUpdatingStatusAssessment] = useState<Assessment | null>(null);
   const [formData, setFormData] = useState<AssessmentFormData>({
     employeeId: employeeIdNum,
     scores: [
@@ -202,6 +205,47 @@ export default function AssessmentsByEmployeePage() {
   };
 
   const criteriaList: CriteriaType[] = criteriaData?.data || [];
+
+  // Handler mở modal cập nhật status
+  const handleOpenStatusModal = (assessment: Assessment) => {
+    setUpdatingStatusAssessment(assessment);
+    setIsStatusModalOpen(true);
+  };
+
+  // Handler đóng modal cập nhật status
+  const handleCloseStatusModal = () => {
+    setIsStatusModalOpen(false);
+    setUpdatingStatusAssessment(null);
+  };
+
+  // Mutation để cập nhật status
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ assessmentId, status }: { assessmentId: number; status: string }) =>
+      updateAssessmentStatus(assessmentId, { status }),
+    onSuccess: () => {
+      toast.success("Cập nhật trạng thái thành công!");
+      // Invalidate và refetch danh sách assessments
+      queryClient.invalidateQueries({ queryKey: ["employee-assessments", employeeIdNum] });
+      handleCloseStatusModal();
+    },
+    onError: (error) => {
+      toast.error(`Lỗi khi cập nhật trạng thái: ${error instanceof Error ? error.message : "Có lỗi xảy ra"}`);
+      console.error("Update status error:", error);
+    },
+  });
+
+  const handleUpdateStatus = () => {
+    if (!updatingStatusAssessment) {
+      toast.error("Không tìm thấy đánh giá");
+      return;
+    }
+
+    // Tự động set status là "Published"
+    updateStatusMutation.mutate({
+      assessmentId: updatingStatusAssessment.assessmentId,
+      status: "Published",
+    });
+  };
 
   const handleOpenEditModal = (assessment: Assessment) => {
     setEditingAssessment(assessment);
@@ -518,6 +562,15 @@ export default function AssessmentsByEmployeePage() {
                                 </td>
                                 <td className="px-4 py-3 text-center">
                                   <div className="flex items-center justify-center gap-2">
+                                    {assessment.status !== "Published" && (
+                                      <button
+                                        onClick={() => handleOpenStatusModal(assessment)}
+                                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-purple-600 hover:bg-purple-50 rounded-md transition"
+                                        title="Cập nhật trạng thái"
+                                      >
+                                        <span>Cập nhật trạng thái</span>
+                                      </button>
+                                    )}
                                     <button
                                       onClick={() => handleOpenEditModal(assessment)}
                                       className="flex items-center gap-1 px-3 py-1.5 text-sm text-green-600 hover:bg-green-50 rounded-md transition"
@@ -954,6 +1007,67 @@ export default function AssessmentsByEmployeePage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Xác Nhận Cập Nhật Trạng Thái */}
+      {isStatusModalOpen && updatingStatusAssessment && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm bg-white/30"
+          onClick={handleCloseStatusModal}
+        >
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-gray-800">
+                  Xác nhận cập nhật trạng thái đánh giá #{updatingStatusAssessment.assessmentId}
+                </h3>
+                <button
+                  onClick={handleCloseStatusModal}
+                  className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                  disabled={updateStatusMutation.isPending}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <p className="text-gray-700 mb-4">
+                    Bạn có chắc chắn muốn cập nhật trạng thái đánh giá này thành{" "}
+                    <span className="font-semibold">"Đã công bố"</span>?
+                  </p>
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Trạng thái hiện tại</label>
+                    <div>{getStatusBadge(updatingStatusAssessment.status)}</div>
+                  </div>
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Trạng thái mới</label>
+                    <div>{getStatusBadge("Published")}</div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={handleCloseStatusModal}
+                    disabled={updateStatusMutation.isPending}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleUpdateStatus}
+                    disabled={updateStatusMutation.isPending}
+                    className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {updateStatusMutation.isPending ? "Đang cập nhật..." : "Xác nhận"}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

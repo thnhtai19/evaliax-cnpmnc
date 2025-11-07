@@ -259,6 +259,7 @@ export default function AssessmentsPage() {
                         </thead>
                         <tbody>
                           {data.data.slice((page - 1) * perPage, page * perPage).map((assessment) => {
+                            console.log("assessment", assessment.status);
                             const isExpanded = expandedRows.has(assessment.assessmentId);
                             return (
                               <>

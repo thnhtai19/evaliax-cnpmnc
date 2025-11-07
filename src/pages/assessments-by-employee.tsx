@@ -1,12 +1,18 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Sidebar from "@/components/shared/sidebar";
 import { format } from "date-fns";
-import { FileText, Loader2, Plus, Edit, ArrowLeft } from "lucide-react";
+import { FileText, Loader2, Plus, Edit, ArrowLeft, X } from "lucide-react";
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getAssessmentsByEmployee } from "@/service/api/assessments/get-by-employee";
 import { FaFileExport } from "react-icons/fa";
 import * as XLSX from "xlsx";
+import { createAssessment } from "@/service/api/assessments/create";
+import { updateAssessment, type UpdateAssessmentRequest } from "@/service/api/assessments/update";
+import { getCriteriaList } from "@/service/api/criteria/get-list";
+import type { Criteria as CriteriaType } from "@/service/api/criteria/get-list/types";
+import { toast } from "react-toastify";
+import type { Assessment } from "@/service/api/assessments/get-supervisor/types";
 
 const getStatusBadge = (status: string) => {
   const statusMap: Record<string, { bg: string; text: string; label: string }> = {
@@ -27,9 +33,21 @@ const getStatusBadge = (status: string) => {
   );
 };
 
+interface ScoreFormData {
+  criteriaId: number;
+  score: number;
+  comment: string;
+}
+
+interface AssessmentFormData {
+  employeeId: number;
+  scores: ScoreFormData[];
+}
+
 export default function AssessmentsByEmployeePage() {
   const { employeeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const employeeIdNum = employeeId ? parseInt(employeeId, 10) : 0;
 
   const { data, isLoading, error } = useQuery({
@@ -38,7 +56,25 @@ export default function AssessmentsByEmployeePage() {
     enabled: !!employeeIdNum,
   });
 
+  const { data: criteriaData } = useQuery({
+    queryKey: ["criteria"],
+    queryFn: () => getCriteriaList({}),
+  });
+
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingAssessment, setEditingAssessment] = useState<Assessment | null>(null);
+  const [formData, setFormData] = useState<AssessmentFormData>({
+    employeeId: employeeIdNum,
+    scores: [
+      {
+        criteriaId: 0,
+        score: 0,
+        comment: "",
+      },
+    ],
+  });
 
   const toggleRow = (assessmentId: number) => {
     const newExpanded = new Set(expandedRows);
@@ -50,14 +86,194 @@ export default function AssessmentsByEmployeePage() {
     setExpandedRows(newExpanded);
   };
 
-  const handleCreateAssessment = () => {
-    alert(`Tạo đánh giá mới cho nhân viên ID: ${employeeIdNum}`);
-    // TODO: Implement create assessment logic
+  const handleOpenModal = () => {
+    setFormData({
+      employeeId: employeeIdNum,
+      scores: [
+        {
+          criteriaId: 0,
+          score: 0,
+          comment: "",
+        },
+      ],
+    });
+    setIsModalOpen(true);
   };
 
-  const handleEditAssessment = (assessmentId: number) => {
-    alert(`Chỉnh sửa đánh giá #${assessmentId}`);
-    // TODO: Implement edit assessment logic
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setFormData({
+      employeeId: employeeIdNum,
+      scores: [
+        {
+          criteriaId: 0,
+          score: 0,
+          comment: "",
+        },
+      ],
+    });
+  };
+
+  const handleAddScore = () => {
+    setFormData({
+      ...formData,
+      scores: [
+        ...formData.scores,
+        {
+          criteriaId: 0,
+          score: 0,
+          comment: "",
+        },
+      ],
+    });
+  };
+
+  const handleRemoveScore = (index: number) => {
+    setFormData({
+      ...formData,
+      scores: formData.scores.filter((_, i) => i !== index),
+    });
+  };
+
+  const handleScoreChange = (index: number, field: keyof ScoreFormData, value: number | string) => {
+    const newScores = [...formData.scores];
+
+    // Validate score range (0-100), cho phép nhập 0
+    if (field === "score") {
+      const numValue = typeof value === "string" ? Number(value) : value;
+      if (!isNaN(numValue)) {
+        if (numValue < 0) {
+          value = 0;
+        } else if (numValue > 100) {
+          value = 100;
+        } else {
+          value = numValue; // Cho phép 0-100
+        }
+      }
+    }
+
+    newScores[index] = {
+      ...newScores[index],
+      [field]: value,
+    };
+    setFormData({
+      ...formData,
+      scores: newScores,
+    });
+  };
+
+  // Mutation để tạo assessment
+  const createMutation = useMutation({
+    mutationFn: createAssessment,
+    onSuccess: () => {
+      toast.success("Tạo đánh giá thành công!");
+      // Invalidate và refetch danh sách assessments
+      queryClient.invalidateQueries({ queryKey: ["employee-assessments", employeeIdNum] });
+      handleCloseModal();
+    },
+    onError: (error) => {
+      toast.error(`Lỗi khi tạo đánh giá: ${error instanceof Error ? error.message : "Có lỗi xảy ra"}`);
+      console.error("Create assessment error:", error);
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.employeeId > 0 && formData.scores.length > 0) {
+      // Validate all scores have criteriaId and score
+      const isValid = formData.scores.every(
+        (score) => score.criteriaId > 0 && score.score > 0 && score.comment.trim() !== "",
+      );
+      if (isValid) {
+        createMutation.mutate({
+          employeeId: formData.employeeId,
+          scores: formData.scores.map((score) => ({
+            criteriaId: score.criteriaId,
+            score: score.score,
+            comment: score.comment.trim(),
+          })),
+        });
+      } else {
+        toast.error("Vui lòng điền đầy đủ thông tin cho tất cả tiêu chí");
+      }
+    } else {
+      toast.error("Vui lòng thêm ít nhất một tiêu chí");
+    }
+  };
+
+  const criteriaList: CriteriaType[] = criteriaData?.data || [];
+
+  const handleOpenEditModal = (assessment: Assessment) => {
+    setEditingAssessment(assessment);
+    setFormData({
+      employeeId: assessment.employee.id,
+      scores: assessment.criteriaScores.map((criteriaScore) => ({
+        criteriaId: criteriaScore.criteria.criteriaId,
+        score: criteriaScore.score,
+        comment: criteriaScore.comment || "",
+      })),
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingAssessment(null);
+    setFormData({
+      employeeId: employeeIdNum,
+      scores: [
+        {
+          criteriaId: 0,
+          score: 0,
+          comment: "",
+        },
+      ],
+    });
+  };
+
+  // Mutation để cập nhật assessment
+  const updateMutation = useMutation({
+    mutationFn: ({ assessmentId, data }: { assessmentId: number; data: UpdateAssessmentRequest }) =>
+      updateAssessment(assessmentId, data),
+    onSuccess: () => {
+      toast.success("Cập nhật đánh giá thành công!");
+      // Invalidate và refetch danh sách assessments
+      queryClient.invalidateQueries({ queryKey: ["employee-assessments", employeeIdNum] });
+      handleCloseEditModal();
+    },
+    onError: (error) => {
+      toast.error(`Lỗi khi cập nhật đánh giá: ${error instanceof Error ? error.message : "Có lỗi xảy ra"}`);
+      console.error("Update assessment error:", error);
+    },
+  });
+
+  const handleUpdateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAssessment) return;
+
+    if (formData.employeeId > 0 && formData.scores.length > 0) {
+      // Validate all scores have criteriaId and score
+      const isValid = formData.scores.every(
+        (score) => score.criteriaId > 0 && score.score > 0 && score.comment.trim() !== "",
+      );
+      if (isValid) {
+        updateMutation.mutate({
+          assessmentId: editingAssessment.assessmentId,
+          data: {
+            employeeId: formData.employeeId,
+            scores: formData.scores.map((score) => ({
+              criteriaId: score.criteriaId,
+              score: score.score,
+              comment: score.comment.trim(),
+            })),
+          },
+        });
+      } else {
+        toast.error("Vui lòng điền đầy đủ thông tin cho tất cả tiêu chí");
+      }
+    } else {
+      toast.error("Vui lòng thêm ít nhất một tiêu chí");
+    }
   };
 
   const handleExportToExcel = () => {
@@ -228,7 +444,7 @@ export default function AssessmentsByEmployeePage() {
                 Xuất Excel
               </button>
               <button
-                onClick={handleCreateAssessment}
+                onClick={handleOpenModal}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition cursor-pointer"
               >
                 <Plus className="size-4" />
@@ -259,7 +475,7 @@ export default function AssessmentsByEmployeePage() {
                     <FileText className="size-16 text-gray-300 mx-auto mb-4" />
                     <p className="text-gray-600 text-lg mb-4">Chưa có đánh giá nào cho nhân viên này</p>
                     <button
-                      onClick={handleCreateAssessment}
+                      onClick={handleOpenModal}
                       className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition"
                     >
                       <Plus className="size-4" />
@@ -303,7 +519,7 @@ export default function AssessmentsByEmployeePage() {
                                 <td className="px-4 py-3 text-center">
                                   <div className="flex items-center justify-center gap-2">
                                     <button
-                                      onClick={() => handleEditAssessment(assessment.assessmentId)}
+                                      onClick={() => handleOpenEditModal(assessment)}
                                       className="flex items-center gap-1 px-3 py-1.5 text-sm text-green-600 hover:bg-green-50 rounded-md transition"
                                       title="Chỉnh sửa"
                                     >
@@ -408,6 +624,340 @@ export default function AssessmentsByEmployeePage() {
           </div>
         </div>
       </main>
+
+      {/* Modal Tạo Đánh Giá */}
+      {isModalOpen && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm bg-white/30"
+          onClick={handleCloseModal}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-gray-800">Tạo đánh giá mới</h3>
+                <button
+                  onClick={handleCloseModal}
+                  className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                  disabled={createMutation.isPending}
+                >
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nhân viên <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={`${data?.data?.[0]?.employee?.name || "Nhân viên"} (ID: ${employeeIdNum})`}
+                    disabled
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 text-gray-600 cursor-not-allowed"
+                  />
+                </div>
+
+                <div className="border-t pt-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Danh sách tiêu chí đánh giá <span className="text-red-500">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleAddScore}
+                      className="flex items-center gap-2 px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded-md transition"
+                    >
+                      <Plus className="size-4" /> Thêm tiêu chí
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {formData.scores.map((score, index) => (
+                      <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <div className="flex justify-between items-center mb-3">
+                          <span className="text-sm font-semibold text-gray-700">Tiêu chí #{index + 1}</span>
+                          {formData.scores.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveScore(index)}
+                              className="text-red-600 hover:text-red-800 transition"
+                            >
+                              <X className="size-4" />
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Tiêu chí <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                              required
+                              value={score.criteriaId || ""}
+                              onChange={(e) => handleScoreChange(index, "criteriaId", Number(e.target.value))}
+                              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">Chọn tiêu chí</option>
+                              {criteriaList.map((criteria) => (
+                                <option key={criteria.criteriaId} value={criteria.criteriaId}>
+                                  {criteria.name} (ID: {criteria.criteriaId})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Điểm <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="number"
+                              required
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={score.score || ""}
+                              onChange={(e) => {
+                                const inputValue = e.target.value;
+                                if (inputValue === "") {
+                                  handleScoreChange(index, "score", "");
+                                  return;
+                                }
+                                const numValue = Number(inputValue);
+                                if (!isNaN(numValue)) {
+                                  const clampedValue = Math.max(0, Math.min(100, numValue));
+                                  handleScoreChange(index, "score", clampedValue);
+                                }
+                              }}
+                              onBlur={(e) => {
+                                const inputValue = e.target.value;
+                                if (inputValue === "") {
+                                  handleScoreChange(index, "score", 0);
+                                  return;
+                                }
+                                const numValue = Number(inputValue);
+                                if (!isNaN(numValue)) {
+                                  const clampedValue = Math.max(0, Math.min(100, numValue));
+                                  handleScoreChange(index, "score", clampedValue);
+                                }
+                              }}
+                              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="0-100"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mt-3">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Nhận xét <span className="text-red-500">*</span>
+                          </label>
+                          <textarea
+                            required
+                            value={score.comment}
+                            onChange={(e) => handleScoreChange(index, "comment", e.target.value)}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Nhập nhận xét..."
+                            rows={2}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={handleCloseModal}
+                    disabled={createMutation.isPending}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={createMutation.isPending}
+                    className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {createMutation.isPending ? "Đang tạo..." : "Tạo đánh giá"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Sửa Đánh Giá */}
+      {isEditModalOpen && editingAssessment && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm bg-white/30"
+          onClick={handleCloseEditModal}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-gray-800">Sửa đánh giá #{editingAssessment.assessmentId}</h3>
+                <button
+                  onClick={handleCloseEditModal}
+                  className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                  disabled={updateMutation.isPending}
+                >
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nhân viên <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={`${editingAssessment.employee.name} (ID: ${editingAssessment.employee.id})`}
+                    disabled
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 text-gray-600 cursor-not-allowed"
+                  />
+                </div>
+
+                <div className="border-t pt-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Danh sách tiêu chí đánh giá <span className="text-red-500">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleAddScore}
+                      className="flex items-center gap-2 px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded-md transition"
+                    >
+                      <Plus className="size-4" /> Thêm tiêu chí
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {formData.scores.map((score, index) => (
+                      <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <div className="flex justify-between items-center mb-3">
+                          <span className="text-sm font-semibold text-gray-700">Tiêu chí #{index + 1}</span>
+                          {formData.scores.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveScore(index)}
+                              className="text-red-600 hover:text-red-800 transition"
+                            >
+                              <X className="size-4" />
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Tiêu chí <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                              required
+                              value={score.criteriaId || ""}
+                              onChange={(e) => handleScoreChange(index, "criteriaId", Number(e.target.value))}
+                              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">Chọn tiêu chí</option>
+                              {criteriaList.map((criteria) => (
+                                <option key={criteria.criteriaId} value={criteria.criteriaId}>
+                                  {criteria.name} (ID: {criteria.criteriaId})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Điểm <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="number"
+                              required
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={score.score || ""}
+                              onChange={(e) => {
+                                const inputValue = e.target.value;
+                                if (inputValue === "") {
+                                  handleScoreChange(index, "score", "");
+                                  return;
+                                }
+                                const numValue = Number(inputValue);
+                                if (!isNaN(numValue)) {
+                                  const clampedValue = Math.max(0, Math.min(100, numValue));
+                                  handleScoreChange(index, "score", clampedValue);
+                                }
+                              }}
+                              onBlur={(e) => {
+                                const inputValue = e.target.value;
+                                if (inputValue === "") {
+                                  handleScoreChange(index, "score", 0);
+                                  return;
+                                }
+                                const numValue = Number(inputValue);
+                                if (!isNaN(numValue)) {
+                                  const clampedValue = Math.max(0, Math.min(100, numValue));
+                                  handleScoreChange(index, "score", clampedValue);
+                                }
+                              }}
+                              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="0-100"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mt-3">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Nhận xét <span className="text-red-500">*</span>
+                          </label>
+                          <textarea
+                            required
+                            value={score.comment}
+                            onChange={(e) => handleScoreChange(index, "comment", e.target.value)}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Nhập nhận xét..."
+                            rows={2}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={handleCloseEditModal}
+                    disabled={updateMutation.isPending}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={updateMutation.isPending}
+                    className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {updateMutation.isPending ? "Đang cập nhật..." : "Cập nhật đánh giá"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

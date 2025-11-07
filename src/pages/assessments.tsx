@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Sidebar from "@/components/shared/sidebar";
 import { format } from "date-fns";
 import { FileText, Loader2, Eye, ChevronUp, Plus, X } from "lucide-react";
@@ -6,6 +6,9 @@ import { useState } from "react";
 import { getCriteriaList } from "@/service/api/criteria/get-list";
 import type { Criteria as CriteriaType } from "@/service/api/criteria/get-list/types";
 import { getSupervisorAssessments } from "@/service/api/assessments/get-supervisor";
+import { createAssessment } from "@/service/api/assessments/create";
+import { getEmployeeList } from "@/service/api/employee/get-list";
+import { toast } from "react-toastify";
 
 const getStatusBadge = (status: string) => {
   const statusMap: Record<string, { bg: string; text: string; label: string }> = {
@@ -38,6 +41,8 @@ interface AssessmentFormData {
 }
 
 export default function AssessmentsPage() {
+  const queryClient = useQueryClient();
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["assessments"],
     queryFn: getSupervisorAssessments,
@@ -46,6 +51,11 @@ export default function AssessmentsPage() {
   const { data: criteriaData } = useQuery({
     queryKey: ["criteria"],
     queryFn: () => getCriteriaList({}),
+  });
+
+  const { data: employeeData } = useQuery({
+    queryKey: ["employees"],
+    queryFn: () => getEmployeeList({ page: 0, size: 100 }),
   });
 
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
@@ -124,6 +134,21 @@ export default function AssessmentsPage() {
     });
   };
 
+  // Mutation để tạo assessment
+  const createMutation = useMutation({
+    mutationFn: createAssessment,
+    onSuccess: () => {
+      toast.success("Tạo đánh giá thành công!");
+      // Invalidate và refetch danh sách assessments
+      queryClient.invalidateQueries({ queryKey: ["assessments"] });
+      handleCloseModal();
+    },
+    onError: (error) => {
+      toast.error(`Lỗi khi tạo đánh giá: ${error instanceof Error ? error.message : "Có lỗi xảy ra"}`);
+      console.error("Create assessment error:", error);
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.employeeId > 0 && formData.scores.length > 0) {
@@ -132,14 +157,24 @@ export default function AssessmentsPage() {
         (score) => score.criteriaId > 0 && score.score > 0 && score.comment.trim() !== "",
       );
       if (isValid) {
-        console.log("Submit assessment:", formData);
-        // TODO: Call API to create assessment
-        handleCloseModal();
+        createMutation.mutate({
+          employeeId: formData.employeeId,
+          scores: formData.scores.map((score) => ({
+            criteriaId: score.criteriaId,
+            score: score.score,
+            comment: score.comment.trim(),
+          })),
+        });
+      } else {
+        toast.error("Vui lòng điền đầy đủ thông tin cho tất cả tiêu chí");
       }
+    } else {
+      toast.error("Vui lòng chọn nhân viên và thêm ít nhất một tiêu chí");
     }
   };
 
   const criteriaList: CriteriaType[] = criteriaData?.data || [];
+  const employeeList = employeeData?.content || [];
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar />
@@ -412,17 +447,21 @@ export default function AssessmentsPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    ID Nhân viên <span className="text-red-500">*</span>
+                    Nhân viên <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="number"
+                  <select
                     required
-                    min="1"
                     value={formData.employeeId || ""}
                     onChange={(e) => setFormData({ ...formData, employeeId: Number(e.target.value) })}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Nhập ID nhân viên"
-                  />
+                  >
+                    <option value="">Chọn nhân viên</option>
+                    {employeeList.map((employee) => (
+                      <option key={employee.id} value={employee.id}>
+                        {employee.name} (ID: {employee.id}) - {employee.email}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="border-t pt-4">
@@ -520,9 +559,10 @@ export default function AssessmentsPage() {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition"
+                    disabled={createMutation.isPending}
+                    className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Tạo đánh giá
+                    {createMutation.isPending ? "Đang tạo..." : "Tạo đánh giá"}
                   </button>
                 </div>
               </form>

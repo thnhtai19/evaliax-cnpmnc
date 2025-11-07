@@ -74,7 +74,7 @@ apiClient.interceptors.response.use(
                     { refreshToken }
                 );
 
-                const { accessToken: newAccessToken } = response.data;
+                const { accessToken: newAccessToken } = response.data.data;
 
                 updateAccessToken(newAccessToken);
 

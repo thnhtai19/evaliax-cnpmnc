@@ -1,12 +1,8 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuthContext';
 import { Box, CircularProgress } from '@mui/material';
 
-interface GuestRouteProps {
-    children: React.ReactNode;
-}
-
-export const GuestRoute = ({ children }: GuestRouteProps) => {
+export const GuestLayout = () => {
     const { isAuthenticated, isLoading } = useAuth();
 
     if (isLoading) {
@@ -28,6 +24,5 @@ export const GuestRoute = ({ children }: GuestRouteProps) => {
         return <Navigate to="/dashboard" replace />;
     }
 
-    return <>{children}</>;
+    return <Outlet />;
 };
-

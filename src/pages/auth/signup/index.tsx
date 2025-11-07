@@ -1,7 +1,7 @@
 import LogoHeader from "@/components/LogoHeader";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useAuth } from "@/hooks/useAuthContext";
+import { useSignup } from "@/hooks/useAuth";
 import {
     Box,
     TextField,
@@ -19,11 +19,10 @@ import CloseIcon from "@mui/icons-material/Close";
 
 export default function SignUpPage() {
     const navigate = useNavigate();
-    const { signup, isSignupPending } = useAuth();
-    const [name, setName] = useState("");
-    const [username, setUsername] = useState("");
+    const signup = useSignup();
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [errors, setErrors] = useState({ name: "", username: "", password: "" });
+    const [errors, setErrors] = useState({ email: "", password: "" });
     const [snackbar, setSnackbar] = useState({
         open: false,
         message: "",
@@ -31,25 +30,18 @@ export default function SignUpPage() {
     });
 
     const validateForm = () => {
-        const newErrors = { name: "", username: "", password: "" };
+        const newErrors = { email: "", password: "" };
         let isValid = true;
 
-        // Validate name
-        if (!name) {
-            newErrors.name = "Please enter your name!";
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email) {
+            newErrors.email = "Please enter your email!";
+            isValid = false;
+        } else if (!emailRegex.test(email)) {
+            newErrors.email = "Please enter a valid email address!";
             isValid = false;
         }
 
-        // Validate email
-        if (!username) {
-            newErrors.username = "Please enter your email!";
-            isValid = false;
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username)) {
-            newErrors.username = "Please enter a valid email!";
-            isValid = false;
-        }
-
-        // Validate password
         if (!password) {
             newErrors.password = "Please enter your password!";
             isValid = false;
@@ -70,10 +62,10 @@ export default function SignUpPage() {
         }
 
         try {
-            await signup(name, username, password);
+            await signup.mutateAsync({ name: "", email, password });
             setSnackbar({
                 open: true,
-                message: "Account created successfully!",
+                message: "Registered successfully",
                 severity: "success",
             });
         } catch (error) {
@@ -82,7 +74,7 @@ export default function SignUpPage() {
                 : error instanceof Error ? error.message : undefined;
             setSnackbar({
                 open: true,
-                message: errorMessage || "Sign up failed. Please try again.",
+                message: errorMessage || "Invalid username or password.",
                 severity: "error",
             });
         }
@@ -115,41 +107,22 @@ export default function SignUpPage() {
                     }}
                 >
                     <Typography variant="h5" sx={{ fontWeight: 500, mb: 3 }}>
-                        Create your account
+                        Create an account
                     </Typography>
 
                     <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 3 }}>
-                        <Box>
-                            <Typography variant="body2" sx={{ mb: 1 }}>
-                                Full Name
-                            </Typography>
-                            <TextField
-                                fullWidth
-                                placeholder="John Doe"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                error={!!errors.name}
-                                helperText={errors.name}
-                                size="small"
-                                sx={{
-                                    '& .MuiInputBase-root': {
-                                        height: 48,
-                                    },
-                                }}
-                            />
-                        </Box>
-
                         <Box>
                             <Typography variant="body2" sx={{ mb: 1 }}>
                                 Email
                             </Typography>
                             <TextField
                                 fullWidth
+                                type="email"
                                 placeholder="name@work-email.com"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                error={!!errors.username}
-                                helperText={errors.username}
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                error={!!errors.email}
+                                helperText={errors.email}
                                 size="small"
                                 sx={{
                                     '& .MuiInputBase-root': {
@@ -160,9 +133,16 @@ export default function SignUpPage() {
                         </Box>
 
                         <Box>
-                            <Typography variant="body2" sx={{ mb: 1 }}>
-                                Password
-                            </Typography>
+                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+                                <Typography variant="body2">Password</Typography>
+                                <Link
+                                    href="#"
+                                    underline="none"
+                                    sx={{ fontSize: "0.875rem", fontWeight: 500, cursor: "pointer" }}
+                                >
+                                    Forgot your password?
+                                </Link>
+                            </Box>
                             <TextField
                                 fullWidth
                                 type="password"
@@ -184,10 +164,10 @@ export default function SignUpPage() {
                             type="submit"
                             variant="contained"
                             fullWidth
-                            disabled={isSignupPending}
+                            disabled={signup.isPending}
                             sx={{ mt: 1, textTransform: "none", py: 1, height: 48 }}
                         >
-                            {isSignupPending ? (
+                            {signup.isPending ? (
                                 <CircularProgress size={24} color="inherit" />
                             ) : (
                                 "Sign up with Email"
@@ -208,7 +188,7 @@ export default function SignUpPage() {
                             sx={{ textTransform: "none", py: 1, display: "flex", gap: 1, height: 48 }}
                         >
                             <img src="/icon-google.png" alt="Google" style={{ width: 24, height: 24 }} />
-                            <span>Sign up with Google</span>
+                            <span>Sign in with Google</span>
                         </Button>
                     </Box>
                 </Paper>
@@ -225,7 +205,7 @@ export default function SignUpPage() {
                                 navigate("/auth/signin");
                             }}
                         >
-                            Sign in
+                            Login
                         </Link>
                     </Typography>
                 </Box>
@@ -244,4 +224,3 @@ export default function SignUpPage() {
         </Box>
     );
 }
-

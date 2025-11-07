@@ -33,6 +33,15 @@ export default function SignInPage() {
         const newErrors = { username: "", password: "" };
         let isValid = true;
 
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!username) {
+            newErrors.username = "Please enter your email!";
+            isValid = false;
+        } else if (!emailRegex.test(username)) {
+            newErrors.username = "Please enter a valid email address!";
+            isValid = false;
+        }
+
         if (!password) {
             newErrors.password = "Please enter your password!";
             isValid = false;
@@ -108,6 +117,7 @@ export default function SignInPage() {
                             </Typography>
                             <TextField
                                 fullWidth
+                                type="email"
                                 placeholder="name@work-email.com"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}

@@ -1,12 +1,9 @@
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuthContext';
 import { Box, CircularProgress } from '@mui/material';
+import ChatWidget from '@/components/ChatWidget';
 
-interface ProtectedRouteProps {
-    children: React.ReactNode;
-}
-
-export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+export const ProtectedLayout = () => {
     const { isAuthenticated, isLoading } = useAuth();
     const location = useLocation();
 
@@ -29,6 +26,10 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         return <Navigate to="/auth/signin" state={{ from: location }} replace />;
     }
 
-    return <>{children}</>;
+    return (
+        <>
+            <Outlet />
+            <ChatWidget />
+        </>
+    );
 };
-

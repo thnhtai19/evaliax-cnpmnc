@@ -9,7 +9,5 @@ export interface Criteria {
 export interface SearchCriteriaResponse {
   message: string;
   status: number;
-  payload: {
-    data: Criteria[];
-  };
+  data: Criteria[];
 }

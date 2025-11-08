@@ -7,7 +7,9 @@ import { useSearchParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { deleteCriteria } from "@/service/api/criteria/delete";
 import { createCriteria } from "@/service/api/criteria/create";
+import { updateCriteria } from "@/service/api/criteria/update";
 import { toast } from "react-toastify";
+import EditIcon from "@mui/icons-material/Edit";
 
 // Map weight number to label (priority/importance levels)
 const getWeightLabel = (weight: number): string => {
@@ -41,7 +43,9 @@ export const CriteriaList = ({ criteriaList = [], pagination }: CriteriaListProp
   const [perPage] = useState(5);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [criteriaToDelete, setCriteriaToDelete] = useState<Criteria | null>(null);
+  const [criteriaToEdit, setCriteriaToEdit] = useState<Criteria | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -140,6 +144,28 @@ export const CriteriaList = ({ criteriaList = [], pagination }: CriteriaListProp
     });
   };
 
+  const handleOpenEditModal = (criteria: Criteria) => {
+    setCriteriaToEdit(criteria);
+    setFormData({
+      name: criteria.name,
+      description: criteria.description,
+      weight: criteria.weight,
+      category: criteria.category as "HARDSKILL" | "SOFTSKILL",
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setCriteriaToEdit(null);
+    setFormData({
+      name: "",
+      description: "",
+      weight: 1,
+      category: "HARDSKILL",
+    });
+  };
+
   // Mutation để tạo criteria
   const createMutation = useMutation({
     mutationFn: (data: { name: string; description: string; weight: number; category: "HARDSKILL" | "SOFTSKILL" }) => {
@@ -162,6 +188,38 @@ export const CriteriaList = ({ criteriaList = [], pagination }: CriteriaListProp
     e.preventDefault();
     if (formData.name.trim() && formData.description.trim()) {
       createMutation.mutate(formData);
+    }
+  };
+
+  // Mutation để update criteria
+  const updateMutation = useMutation({
+    mutationFn: ({
+      criteriaId,
+      data,
+    }: {
+      criteriaId: number;
+      data: { name: string; description: string; weight: number; category: "HARDSKILL" | "SOFTSKILL" };
+    }) => {
+      return updateCriteria(criteriaId, data);
+    },
+    onSuccess: () => {
+      toast.success("Cập nhật tiêu chí thành công!");
+      queryClient.invalidateQueries({ queryKey: ["criteria"] });
+      handleCloseEditModal();
+    },
+    onError: (error) => {
+      toast.error(`Lỗi khi cập nhật tiêu chí: ${error instanceof Error ? error.message : "Có lỗi xảy ra"}`);
+      console.error("Update error:", error);
+    },
+  });
+
+  const handleUpdateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (criteriaToEdit && formData.name.trim() && formData.description.trim()) {
+      updateMutation.mutate({
+        criteriaId: criteriaToEdit.criteriaId,
+        data: formData,
+      });
     }
   };
 
@@ -304,13 +362,22 @@ export const CriteriaList = ({ criteriaList = [], pagination }: CriteriaListProp
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <Tooltip title="Xóa tiêu chí">
-                      <DeleteOutlineOutlinedIcon
-                        onClick={() => handleOpenDeleteModal(criteria)}
-                        className="text-red-600 hover:text-red-800 transition-colors"
-                        style={{ fontSize: 20, cursor: "pointer" }}
-                      />
-                    </Tooltip>
+                    <div className="flex items-center justify-center gap-2">
+                      <Tooltip title="Chỉnh sửa tiêu chí">
+                        <EditIcon
+                          onClick={() => handleOpenEditModal(criteria)}
+                          className="text-blue-600 hover:text-blue-800 transition-colors"
+                          style={{ fontSize: 20, cursor: "pointer" }}
+                        />
+                      </Tooltip>
+                      <Tooltip title="Xóa tiêu chí">
+                        <DeleteOutlineOutlinedIcon
+                          onClick={() => handleOpenDeleteModal(criteria)}
+                          className="text-red-600 hover:text-red-800 transition-colors"
+                          style={{ fontSize: 20, cursor: "pointer" }}
+                        />
+                      </Tooltip>
+                    </div>
                   </td>
                 </tr>
               );
@@ -443,6 +510,112 @@ export const CriteriaList = ({ criteriaList = [], pagination }: CriteriaListProp
                     className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {createMutation.isPending ? "Đang tạo..." : "Thêm tiêu chí"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Chỉnh Sửa Tiêu Chí */}
+      {isEditModalOpen && criteriaToEdit && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm bg-white/30">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-gray-800">Chỉnh sửa tiêu chí</h3>
+                <button
+                  onClick={handleCloseEditModal}
+                  className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                  disabled={updateMutation.isPending}
+                >
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tên tiêu chí <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Nhập tên tiêu chí"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mô tả <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    required
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Nhập mô tả tiêu chí"
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Trọng số <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={formData.weight}
+                    onChange={(e) => setFormData({ ...formData, weight: Number(e.target.value) })}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="1">Ít quan trọng</option>
+                    <option value="2">Quan trọng</option>
+                    <option value="3">Khá quan trọng</option>
+                    <option value="4">Rất quan trọng</option>
+                    <option value="5">Cực kỳ quan trọng</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Danh mục <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={formData.category}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        category: e.target.value as "HARDSKILL" | "SOFTSKILL",
+                      })
+                    }
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="HARDSKILL">HARDSKILL</option>
+                    <option value="SOFTSKILL">SOFTSKILL</option>
+                  </select>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={handleCloseEditModal}
+                    disabled={updateMutation.isPending}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={updateMutation.isPending}
+                    className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {updateMutation.isPending ? "Đang cập nhật..." : "Cập nhật tiêu chí"}
                   </button>
                 </div>
               </form>

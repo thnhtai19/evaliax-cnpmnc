@@ -197,7 +197,7 @@ export default function AssessmentsByEmployeePage() {
                       d="m1 9 4-4-4-4"
                     />
                   </svg>
-                  <span className="ml-1 text-sm font-medium text-gray-500 md:ml-2">Đánh giá nhân viên</span>
+                  <span className="ml-1 text-sm font-medium text-gray-500 md:ml-2">Tất cả đánh giá</span>
                 </div>
               </li>
             </ol>

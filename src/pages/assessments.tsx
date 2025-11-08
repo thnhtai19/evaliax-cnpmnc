@@ -50,6 +50,8 @@ export default function AssessmentsPage() {
 
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(5);
   const [formData, setFormData] = useState<AssessmentFormData>({
     employeeId: 0,
     scores: [
@@ -148,7 +150,7 @@ export default function AssessmentsPage() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <FileText className="size-8 text-blue-600" />
-              <h1 className="text-3xl font-bold text-gray-900">Đánh giá nhân viên</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Tất cả đánh giá</h1>
             </div>
             <button
               onClick={handleOpenModal}
@@ -181,159 +183,207 @@ export default function AssessmentsPage() {
                     <p className="text-gray-600 text-lg">Chưa có đánh giá nào</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm text-gray-700 border border-gray-200 rounded-lg">
-                      <thead className="bg-gray-100 text-xs text-gray-600 uppercase tracking-wide">
-                        <tr>
-                          <th className="px-4 py-3 text-left">ID đánh giá</th>
-                          <th className="px-4 py-3 text-left">Nhân viên</th>
-                          <th className="px-4 py-3 text-left">Người đánh giá</th>
-                          <th className="px-4 py-3 text-center">Trạng thái</th>
-                          <th className="px-4 py-3 text-center">Tổng điểm</th>
-                          <th className="px-4 py-3 text-center">Số tiêu chí</th>
-                          <th className="px-4 py-3 text-left">Ngày tạo</th>
-                          <th className="px-4 py-3 text-center">Hành động</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.data.map((assessment) => {
-                          const isExpanded = expandedRows.has(assessment.assessmentId);
-                          return (
-                            <>
-                              <tr
-                                key={assessment.assessmentId}
-                                className="border-t hover:bg-gray-50 transition cursor-pointer"
-                              >
-                                <td className="px-4 py-3 font-medium text-gray-900">#{assessment.assessmentId}</td>
-                                <td className="px-4 py-3">
-                                  <div>
-                                    <p className="font-semibold text-gray-900">{assessment.employee.name}</p>
-                                    <p className="text-xs text-gray-500">{assessment.employee.email}</p>
-                                    <p className="text-xs text-gray-400">ID: {assessment.employee.id}</p>
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3">
-                                  <div>
-                                    <p className="font-semibold text-gray-900">{assessment.supervisor.name}</p>
-                                    <p className="text-xs text-gray-500">{assessment.supervisor.email}</p>
-                                    <p className="text-xs text-gray-400">ID: {assessment.supervisor.id}</p>
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3 text-center">{getStatusBadge(assessment.status)}</td>
-                                <td className="px-4 py-3 text-center">
-                                  <span className="text-lg font-bold text-blue-600">
-                                    {assessment.totalScore.toFixed(2)}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 text-center">
-                                  <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-md font-medium">
-                                    {assessment.criteriaScores.length}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 text-gray-600">
-                                  {format(new Date(assessment.createdAt), "dd/MM/yyyy HH:mm")}
-                                </td>
-                                <td className="px-4 py-3 text-center">
-                                  <button
-                                    onClick={() => toggleRow(assessment.assessmentId)}
-                                    className="flex items-center justify-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition"
-                                  >
-                                    {isExpanded ? (
-                                      <>
-                                        <ChevronUp className="size-4" />
-                                        <span>Thu gọn</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Eye className="size-4" />
-                                        <span>Chi tiết</span>
-                                      </>
-                                    )}
-                                  </button>
-                                </td>
-                              </tr>
-                              {isExpanded && (
-                                <tr className="bg-gray-50">
-                                  <td colSpan={8} className="px-4 py-4">
-                                    <div className="space-y-4">
-                                      <div>
-                                        <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase">
-                                          Chi tiết điểm số ({assessment.criteriaScores.length} tiêu chí)
-                                        </h4>
-                                        <div className="overflow-x-auto">
-                                          <table className="min-w-full text-sm border border-gray-200 rounded-lg bg-white">
-                                            <thead className="bg-gray-100">
-                                              <tr>
-                                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">
-                                                  Tiêu chí
-                                                </th>
-                                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">
-                                                  Mô tả
-                                                </th>
-                                                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">
-                                                  Điểm
-                                                </th>
-                                                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">
-                                                  Trọng số
-                                                </th>
-                                                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">
-                                                  Loại
-                                                </th>
-                                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">
-                                                  Nhận xét
-                                                </th>
-                                              </tr>
-                                            </thead>
-                                            <tbody>
-                                              {assessment.criteriaScores.map((criteriaScore, index) => (
-                                                <tr key={index} className="border-t hover:bg-gray-50">
-                                                  <td className="px-3 py-3">
-                                                    <div>
-                                                      <p className="font-semibold text-gray-900">
-                                                        {criteriaScore.criteria.criteriaName}
-                                                      </p>
-                                                      <p className="text-xs text-gray-400">
-                                                        ID: {criteriaScore.criteria.criteriaId}
-                                                      </p>
-                                                    </div>
-                                                  </td>
-                                                  <td className="px-3 py-3 text-gray-600 max-w-xs">
-                                                    <p className="text-xs">{criteriaScore.criteria.description}</p>
-                                                  </td>
-                                                  <td className="px-3 py-3 text-center">
-                                                    <span className="text-lg font-bold text-blue-600">
-                                                      {criteriaScore.score}
-                                                    </span>
-                                                  </td>
-                                                  <td className="px-3 py-3 text-center">
-                                                    <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-medium">
-                                                      {criteriaScore.criteria.weight}
-                                                    </span>
-                                                  </td>
-                                                  <td className="px-3 py-3 text-center">
-                                                    <span className="px-2 py-1 bg-purple-50 text-purple-700 rounded-md text-xs font-medium">
-                                                      {criteriaScore.criteria.category}
-                                                    </span>
-                                                  </td>
-                                                  <td className="px-3 py-3 text-gray-700 max-w-md">
-                                                    <p className="text-sm">{criteriaScore.comment || "-"}</p>
-                                                  </td>
-                                                </tr>
-                                              ))}
-                                            </tbody>
-                                          </table>
-                                        </div>
-                                      </div>
+                  <>
+                    {/* Pagination Controls - Top */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">Hiển thị:</span>
+                        <select
+                          value={perPage}
+                          onChange={(e) => {
+                            setPerPage(Number(e.target.value));
+                            setPage(1);
+                          }}
+                          className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value={5}>5</option>
+                          <option value={10}>10</option>
+                          <option value={20}>20</option>
+                          <option value={50}>50</option>
+                        </select>
+                        <span className="text-sm text-gray-600">mỗi trang</span>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        Hiển thị {(page - 1) * perPage + 1} - {Math.min(page * perPage, data.data.length)} trong tổng số{" "}
+                        {data.data.length} đánh giá
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm text-gray-700 border border-gray-200 rounded-lg">
+                        <thead className="bg-gray-100 text-xs text-gray-600 uppercase tracking-wide">
+                          <tr>
+                            <th className="px-4 py-3 text-left">ID đánh giá</th>
+                            <th className="px-4 py-3 text-left">Nhân viên</th>
+                            <th className="px-4 py-3 text-center">Trạng thái</th>
+                            <th className="px-4 py-3 text-center">Tổng điểm</th>
+                            <th className="px-4 py-3 text-center">Số tiêu chí</th>
+                            <th className="px-4 py-3 text-left">Ngày tạo</th>
+                            <th className="px-4 py-3 text-center">Hành động</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data.data.slice((page - 1) * perPage, page * perPage).map((assessment) => {
+                            const isExpanded = expandedRows.has(assessment.assessmentId);
+                            return (
+                              <>
+                                <tr
+                                  key={assessment.assessmentId}
+                                  className="border-t hover:bg-gray-50 transition cursor-pointer"
+                                >
+                                  <td className="px-4 py-3 font-medium text-gray-900">#{assessment.assessmentId}</td>
+                                  <td className="px-4 py-3">
+                                    <div>
+                                      <p className="font-semibold text-gray-900">{assessment.employee.name}</p>
+                                      <p className="text-xs text-gray-500">{assessment.employee.email}</p>
+                                      <p className="text-xs text-gray-400">ID: {assessment.employee.id}</p>
                                     </div>
                                   </td>
+                                  <td className="px-4 py-3 text-center">{getStatusBadge(assessment.status)}</td>
+                                  <td className="px-4 py-3 text-center">
+                                    <span className="text-lg font-bold text-blue-600">
+                                      {assessment.totalScore.toFixed(2)}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 text-center">
+                                    <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-md font-medium">
+                                      {assessment.criteriaScores.length}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 text-gray-600">
+                                    {format(new Date(assessment.createdAt), "dd/MM/yyyy HH:mm")}
+                                  </td>
+                                  <td className="px-4 py-3 text-center">
+                                    <button
+                                      onClick={() => toggleRow(assessment.assessmentId)}
+                                      className="flex items-center justify-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition"
+                                    >
+                                      {isExpanded ? (
+                                        <>
+                                          <ChevronUp className="size-4" />
+                                          <span>Thu gọn</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Eye className="size-4" />
+                                          <span>Chi tiết</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  </td>
                                 </tr>
-                              )}
-                            </>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                                {isExpanded && (
+                                  <tr className="bg-gray-50">
+                                    <td colSpan={7} className="px-4 py-4">
+                                      <div className="space-y-4">
+                                        <div>
+                                          <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase">
+                                            Chi tiết điểm số ({assessment.criteriaScores.length} tiêu chí)
+                                          </h4>
+                                          <div className="overflow-x-auto">
+                                            <table className="min-w-full text-sm border border-gray-200 rounded-lg bg-white">
+                                              <thead className="bg-gray-100">
+                                                <tr>
+                                                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">
+                                                    Tiêu chí
+                                                  </th>
+                                                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">
+                                                    Mô tả
+                                                  </th>
+                                                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">
+                                                    Điểm
+                                                  </th>
+                                                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">
+                                                    Trọng số
+                                                  </th>
+                                                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">
+                                                    Loại
+                                                  </th>
+                                                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">
+                                                    Nhận xét
+                                                  </th>
+                                                </tr>
+                                              </thead>
+                                              <tbody>
+                                                {assessment.criteriaScores.map((criteriaScore, index) => (
+                                                  <tr key={index} className="border-t hover:bg-gray-50">
+                                                    <td className="px-3 py-3">
+                                                      <div>
+                                                        <p className="font-semibold text-gray-900">
+                                                          {criteriaScore.criteria.criteriaName}
+                                                        </p>
+                                                        <p className="text-xs text-gray-400">
+                                                          ID: {criteriaScore.criteria.criteriaId}
+                                                        </p>
+                                                      </div>
+                                                    </td>
+                                                    <td className="px-3 py-3 text-gray-600 max-w-xs">
+                                                      <p className="text-xs">{criteriaScore.criteria.description}</p>
+                                                    </td>
+                                                    <td className="px-3 py-3 text-center">
+                                                      <span className="text-lg font-bold text-blue-600">
+                                                        {criteriaScore.score}
+                                                      </span>
+                                                    </td>
+                                                    <td className="px-3 py-3 text-center">
+                                                      <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-medium">
+                                                        {criteriaScore.criteria.weight}
+                                                      </span>
+                                                    </td>
+                                                    <td className="px-3 py-3 text-center">
+                                                      <span className="px-2 py-1 bg-purple-50 text-purple-700 rounded-md text-xs font-medium">
+                                                        {criteriaScore.criteria.category}
+                                                      </span>
+                                                    </td>
+                                                    <td className="px-3 py-3 text-gray-700 max-w-md">
+                                                      <p className="text-sm">{criteriaScore.comment || "-"}</p>
+                                                    </td>
+                                                  </tr>
+                                                ))}
+                                              </tbody>
+                                            </table>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Pagination Controls - Bottom */}
+                    {data.data.length > perPage && (
+                      <div className="flex items-center justify-between mt-4">
+                        <div className="text-sm text-gray-600">
+                          Hiển thị {(page - 1) * perPage + 1} - {Math.min(page * perPage, data.data.length)} trong tổng
+                          số {data.data.length} đánh giá
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                            disabled={page === 1}
+                            className="px-3 py-2 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                          >
+                            Trước
+                          </button>
+                          <span className="px-3 py-2 text-sm text-gray-700">
+                            Trang {page} / {Math.ceil(data.data.length / perPage)}
+                          </span>
+                          <button
+                            onClick={() => setPage((p) => Math.min(Math.ceil(data.data.length / perPage), p + 1))}
+                            disabled={page >= Math.ceil(data.data.length / perPage)}
+                            className="px-3 py-2 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                          >
+                            Sau
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </>
             )}

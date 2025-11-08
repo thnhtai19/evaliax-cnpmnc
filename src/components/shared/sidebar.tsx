@@ -27,7 +27,7 @@ const Sidebar = () => {
       href: "/employee",
     },
     {
-      title: "Đánh giá",
+      title: "Tất cả đánh giá",
       icon: ClipboardList,
       href: "/assessments",
     },
@@ -70,8 +70,8 @@ const Sidebar = () => {
               item.href === "/"
                 ? location.pathname === "/"
                 : item.href === "/assessments"
-                ? location.pathname === item.href // Only active if exact match, not for /assessments/:id
-                : location.pathname === item.href || location.pathname.startsWith(`${item.href}/`);
+                  ? location.pathname === item.href // Only active if exact match, not for /assessments/:id
+                  : location.pathname === item.href || location.pathname.startsWith(`${item.href}/`);
 
             return (
               <Link

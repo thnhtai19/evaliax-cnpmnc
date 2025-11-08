@@ -1,8 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Dashboard from "./pages/Dashboard/dashboard";
 
-import Reports from "./pages/reports";
-import Settings from "./pages/settings";
+import ReportPage from "./pages/Report";
 import NotFound from "./pages/not-found";
 import LandingPage from "./pages/Landing";
 import SignInPage from "./pages/auth/signin";
@@ -14,6 +13,7 @@ import AssessmentsByEmployeePage from "./pages/assessments-by-employee";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedLayout } from "./components/ProtectedRoute";
 import { GuestLayout } from "./components/GuestRoute";
+import CriteriaPage from "./pages/criteria";
 
 function App() {
   return (
@@ -31,8 +31,7 @@ function App() {
             <Route path="/assessments" element={<AssessmentsPage />} />
             <Route path="/criteria" element={<CriteriaPage />} />
             <Route path="/assessments/:employeeId" element={<AssessmentsByEmployeePage />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/reports" element={<ReportPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

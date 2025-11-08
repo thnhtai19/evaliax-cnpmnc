@@ -28,8 +28,21 @@ import { useAuth } from "@/hooks/useAuthContext";
 
 
 export default function Dashboard() {
-  const [startDate, setStartDate] = useState<string>("2025-01-01");
-  const [endDate, setEndDate] = useState<string>("2025-01-31");
+  // Calculate default dates: startDate is 12 months ago, endDate is current month
+  const getDefaultDates = () => {
+    const now = new Date();
+    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of current month
+    const startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1); // First day of 12 months ago
+    
+    return {
+      start: startDate.toISOString().split('T')[0],
+      end: endDate.toISOString().split('T')[0],
+    };
+  };
+
+  const defaultDates = getDefaultDates();
+  const [startDate, setStartDate] = useState<string>(defaultDates.start);
+  const [endDate, setEndDate] = useState<string>(defaultDates.end);
   const [page, setPage] = useState<number>(1);
   const [rowsPerPage] = useState<number>(5);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
@@ -38,7 +51,7 @@ export default function Dashboard() {
   const isSupervisor = currentUser?.role === "SUPERVISOR";
   
   const employeeId = currentUser?.id ? parseInt(currentUser.id, 10) : undefined;
-  const { data: dashboardData, isLoading: isLoadingDashboard, error: dashboardError } = useDashboardData(employeeId);
+  const { data: dashboardData, isLoading: isLoadingDashboard, error: dashboardError } = useDashboardData(employeeId, startDate, endDate);
   const { data: employeeAssessments, isLoading, error } = useEmployeeAssessments();
 
   // Transform monthlyStats to chart data format
@@ -107,6 +120,39 @@ export default function Dashboard() {
       default:
         return "default";
     }
+  };
+
+  // Map weight from number to text
+  const mapWeightToText = (weight: string | number): string => {
+    // Convert to number if it's a string
+    const weightNumber = typeof weight === "number" ? weight : Number(weight);
+    
+    // Map number to text
+    const weightMap: Record<number, string> = {
+      1: "Ít quan trọng",
+      2: "Quan trọng",
+      3: "Khá quan trọng",
+      4: "Rất quan trọng",
+      5: "Cực kỳ quan trọng",
+    };
+
+    // If it's already text, check if it matches our map
+    if (typeof weight === "string") {
+      const normalizedWeight = weight.toLowerCase().trim();
+      const textToNumber: Record<string, number> = {
+        "ít quan trọng": 1,
+        "quan trọng": 2,
+        "khá quan trọng": 3,
+        "rất quan trọng": 4,
+        "cực kỳ quan trọng": 5,
+      };
+      const num = textToNumber[normalizedWeight];
+      if (num) {
+        return weightMap[num] || weight;
+      }
+    }
+
+    return weightMap[weightNumber] || String(weight);
   };
 
   // Supervisor Dashboard - General overview
@@ -229,7 +275,7 @@ export default function Dashboard() {
               <div className="flex items-center gap-3 mb-4">
                 <FileText className="size-6 text-blue-600" />
                 <h2 className="text-xl font-semibold text-gray-800">
-                  Đánh giá của {currentUser?.name || "Nhân viên"} (ID: 46)
+                  Đánh giá của {currentUser?.name || "Nhân viên"} (ID: {currentUser?.id})
                 </h2>
               </div>
 
@@ -336,8 +382,12 @@ export default function Dashboard() {
                                   </TableRow>
                                   <TableRow>
                                     <TableCell 
-                                      style={{ paddingBottom: 0, paddingTop: 0 }} 
                                       colSpan={8}
+                                      sx={{ 
+                                        paddingBottom: 0, 
+                                        paddingTop: 0,
+                                        width: '100%'
+                                      }}
                                     >
                                       <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                                         <Box sx={{ margin: 2 }}>
@@ -349,7 +399,7 @@ export default function Dashboard() {
                                               <TableRow sx={{ backgroundColor: '#f3f4f6' }}>
                                                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Tiêu chí</TableCell>
                                                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }} align="center" width="120px">Loại</TableCell>
-                                                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }} align="center" width="100px">Trọng số</TableCell>
+                                                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }} align="center" width="200px">Trọng số</TableCell>
                                                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }} align="center" width="100px">Điểm</TableCell>
                                                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Nhận xét</TableCell>
                                               </TableRow>
@@ -358,14 +408,21 @@ export default function Dashboard() {
                                               {assessment.criteriaScores.map((criteriaScore, idx) => (
                                                 <TableRow key={idx}>
                                                   <TableCell>
-                                                    <Box>
-                                                      <Typography variant="body2" sx={{ fontWeight: 500, color: '#111827' }}>
-                                                        {criteriaScore.criteria.criteriaName}
-                                                      </Typography>
-                                                      <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '0.75rem' }}>
-                                                        {criteriaScore.criteria.description}
-                                                      </Typography>
-                                                    </Box>
+                                                    <Typography 
+                                                      variant="body2" 
+                                                      sx={{ 
+                                                        fontWeight: 500, 
+                                                        color: '#111827',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        display: '-webkit-box',
+                                                        WebkitLineClamp: 2,
+                                                        WebkitBoxOrient: 'vertical',
+                                                      }}
+                                                      title={criteriaScore.criteria.criteriaName}
+                                                    >
+                                                      {criteriaScore.criteria.criteriaName}
+                                                    </Typography>
                                                   </TableCell>
                                                   <TableCell align="center">
                                                     <Chip 
@@ -380,7 +437,7 @@ export default function Dashboard() {
                                                     />
                                                   </TableCell>
                                                   <TableCell align="center" sx={{ fontWeight: 500 }}>
-                                                    {criteriaScore.criteria.weight}
+                                                    {mapWeightToText(criteriaScore.criteria.weight)}
                                                   </TableCell>
                                                   <TableCell align="center">
                                                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#2563eb' }}>

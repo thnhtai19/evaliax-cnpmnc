@@ -11,9 +11,9 @@ import {
   Stack
 } from "@mui/material";
 import { format } from "date-fns";
-import { FileText } from "lucide-react";
-import type { AssessmentResponse } from "@/lib/mockAssessmentData";
-import { mockAssessmentData } from "@/lib/mockAssessmentData";
+import { FileText, Loader2 } from "lucide-react";
+import { useEmployeeAssessments } from "./api";
+import { useAuth } from "@/hooks/useAuthContext";
 
 const mockEmployeeChartData: IEmployeeChartData[] = [
   { time: "01-01-2025", value: 65 },
@@ -49,16 +49,6 @@ const mockEmployeeChartData: IEmployeeChartData[] = [
   { time: "31-01-2025", value: 85 },
 ];
 
-// Get assessments for employee ID 46
-const getEmployeeAssessments = (employeeId: number): AssessmentResponse => {
-  const filtered = mockAssessmentData.data.filter((assessment) => assessment.employee.id === employeeId);
-  return {
-    message: "Success",
-    status: 200,
-    data: filtered,
-  };
-};
-
 export default function Dashboard() {
   const [startDate, setStartDate] = useState<string>("2025-01-01");
   const [endDate, setEndDate] = useState<string>("2025-01-31");
@@ -70,8 +60,10 @@ export default function Dashboard() {
     });
   }, [startDate, endDate]);
 
-  // Get assessments for employee ID 46
-  const employeeAssessments = getEmployeeAssessments(46);
+  const { data: employeeAssessments, isLoading } = useEmployeeAssessments();
+  const { user: currentUser } = useAuth();
+
+  console.log(employeeAssessments);
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -142,46 +134,55 @@ export default function Dashboard() {
               <div className="flex items-center gap-3 mb-4">
                 <FileText className="size-6 text-blue-600" />
                 <h2 className="text-xl font-semibold text-gray-800">
-                  Đánh giá của {employeeAssessments.data[0]?.employee?.name || "Nhân viên"} (ID: 46)
+                  Đánh giá của {currentUser?.name || "Nhân viên"} (ID: 46)
                 </h2>
               </div>
 
-              {employeeAssessments.data.length === 0 ? (
+              {isLoading ? (
                 <div className="text-center py-8">
-                  <FileText className="size-12 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-600">Chưa có đánh giá nào</p>
+                  <Loader2 className="size-12 text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-600">Đang tải đánh giá...</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm text-gray-700 border border-gray-200 rounded-lg">
-                    <thead className="bg-gray-100 text-xs text-gray-600 uppercase tracking-wide">
-                      <tr>
-                        <th className="px-4 py-3 text-center">STT</th>
-                        <th className="px-4 py-3 text-center">Tổng điểm</th>
-                        <th className="px-4 py-3 text-center">Số tiêu chí</th>
-                        <th className="px-4 py-3 text-left">Ngày tạo</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {employeeAssessments.data.map((assessment, index) => (
-                        <tr key={assessment.assessmentId} className="border-t hover:bg-gray-50 transition">
-                          <td className="px-4 py-3 text-center font-medium text-gray-900">{index + 1}</td>
-                          <td className="px-4 py-3 text-center">
-                            <span className="text-lg font-bold text-blue-600">{assessment.totalScore.toFixed(2)}</span>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-md font-medium">
-                              {assessment.criteriaScores.length}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-gray-600">
-                            {format(new Date(assessment.createdAt), "dd/MM/yyyy HH:mm")}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <>
+                  {employeeAssessments?.length === 0 ? (
+                    <div className="text-center py-8">
+                      <FileText className="size-12 text-gray-300 mx-auto mb-2" />
+                      <p className="text-gray-600">Chưa có đánh giá nào</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm text-gray-700 border border-gray-200 rounded-lg">
+                        <thead className="bg-gray-100 text-xs text-gray-600 uppercase tracking-wide">
+                          <tr>
+                            <th className="px-4 py-3 text-center">STT</th>
+                            <th className="px-4 py-3 text-center">Tổng điểm</th>
+                            <th className="px-4 py-3 text-center">Số tiêu chí</th>
+                            <th className="px-4 py-3 text-left">Ngày tạo</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {employeeAssessments?.map((assessment, index) => (
+                            <tr key={assessment.assessmentId} className="border-t hover:bg-gray-50 transition">
+                              <td className="px-4 py-3 text-center font-medium text-gray-900">{index + 1}</td>
+                              <td className="px-4 py-3 text-center">
+                                <span className="text-lg font-bold text-blue-600">{assessment.totalScore.toFixed(2)}</span>
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-md font-medium">
+                                  {assessment.criteriaScores.length}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-gray-600">
+                                {format(new Date(assessment.createdAt), "dd/MM/yyyy HH:mm")}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </Card>

@@ -14,8 +14,9 @@ const Sidebar = () => {
 
   const displayName = user?.name || user?.email || "Người dùng";
   const displayRole = user?.role;
+  const isEmployee = displayRole === "EMPLOYEE";
 
-  const menuItems: MenuItem[] = [
+  const allMenuItems: MenuItem[] = [
     {
       title: "Tổng quan",
       icon: LayoutDashboard,
@@ -52,6 +53,11 @@ const Sidebar = () => {
       onClick: () => logout(),
     },
   ];
+
+  // Filter menu items based on role
+  const menuItems: MenuItem[] = isEmployee
+    ? allMenuItems.filter((item) => item.title === "Tổng quan" || item.title === "Đăng xuất")
+    : allMenuItems;
 
   return (
     <aside className="flex h-screen w-64 flex-col border-r bg-white">

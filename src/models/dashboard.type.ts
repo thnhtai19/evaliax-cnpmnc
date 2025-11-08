@@ -39,5 +39,26 @@ export interface Criteria {
     status: number;
     data: Assessment[];
   }
+
+  export interface MonthlyStat {
+    year: number;
+    month: number;
+    totalAssessments: number;
+    avgScore: number;
+  }
+
+  export interface DashboardData {
+    employeeId: number;
+    employeeName: string;
+    overallAvgScore: number;
+    totalAssessments: number;
+    monthlyStats: MonthlyStat[];
+  }
+
+  export interface DashboardResponse {
+    message: string;
+    status: number;
+    data: DashboardData;
+  }
   
   

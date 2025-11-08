@@ -1,4 +1,4 @@
-import { Users, FileText, Settings, LayoutDashboard, ClipboardList, LogOut, ListChecks } from "lucide-react";
+import { Users, FileText, LayoutDashboard, ClipboardList, LogOut, ListChecks } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import LogoHeader from "../LogoHeader";
@@ -62,11 +62,6 @@ const Sidebar = () => {
       title: "Báo cáo",
       icon: FileText,
       href: "/reports",
-    },
-    {
-      title: "Cài đặt",
-      icon: Settings,
-      href: "/settings",
     },
     {
       title: "Đăng xuất",
